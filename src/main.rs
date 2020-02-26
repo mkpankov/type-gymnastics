@@ -6,20 +6,6 @@ pub trait Label {
     fn label(&self) -> &str;
 }
 
-pub trait EndpointName {
-    fn endpoint_name() -> &'static str;
-}
-
-pub trait EndpointNameSelf {
-    fn endpoint_name(&self) -> &'static str;
-}
-
-impl<T: EndpointName> EndpointNameSelf for T {
-    fn endpoint_name(&self) -> &'static str {
-        Self::endpoint_name()
-    }
-}
-
 pub trait Id<K>
 where
     K: Eq + Hash,
@@ -31,7 +17,7 @@ pub trait ToCompositeId {
     fn composite_id(&self) -> CompositeId;
 }
 
-pub trait ErasedRecord<K>: Label + EndpointNameSelf + Id<K>
+pub trait ErasedRecord<K>: Id<K>
 where
     K: Eq + Hash,
 {
@@ -39,7 +25,7 @@ where
 
 impl<T, K> ErasedRecord<K> for T
 where
-    T: Label + EndpointNameSelf + Id<K> + ToCompositeId,
+    T: Id<K> + ToCompositeId,
     K: Eq + Hash,
 {
 }
@@ -56,24 +42,6 @@ struct Foo {
     a: u32,
     b: u32,
     label: String,
-}
-
-impl Label for Foo {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl Label for &Foo {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl EndpointName for Foo {
-    fn endpoint_name() -> &'static str {
-        "foo"
-    }
 }
 
 impl ToCompositeId for Foo {

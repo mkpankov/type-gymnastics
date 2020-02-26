@@ -14,7 +14,9 @@ where
 }
 
 pub trait ToCompositeId {
-    fn composite_id(&self) -> CompositeId;
+    fn composite_id<K>(&self) -> CompositeId<K>
+    where
+        K: Eq + Hash + Clone + fmt::Display;
 }
 
 pub trait ErasedRecord<K>: Id<K>
@@ -45,7 +47,10 @@ struct Foo {
 }
 
 impl ToCompositeId for Foo {
-    fn composite_id(&self) -> CompositeId {
+    fn composite_id<K>(&self) -> CompositeId<K>
+    where
+        K: Eq + Hash + Clone + fmt::Display,
+    {
         CompositeId(self.a, self.b)
     }
 }
@@ -60,21 +65,32 @@ pub struct ArcCache {
 )]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
-pub struct CompositeId(pub u32, pub u32);
+pub struct CompositeId<K>(pub K, pub K)
+where
+    K: Eq + Hash + Clone + fmt::Display;
 
-impl fmt::Display for CompositeId {
+impl<K> fmt::Display for CompositeId<K>
+where
+    K: Eq + Hash + Clone + fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.0, self.1)
     }
 }
 
-impl From<CompositeId> for String {
-    fn from(x: CompositeId) -> Self {
+impl<K> From<CompositeId<K>> for String
+where
+    K: Eq + Hash + Clone + fmt::Display,
+{
+    fn from(x: CompositeId<K>) -> Self {
         format!("{}", x)
     }
 }
 
-impl TryFrom<String> for CompositeId {
+impl<K> TryFrom<String> for CompositeId<K>
+where
+    K: Eq + Hash + Clone + fmt::Display,
+{
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
@@ -96,10 +112,10 @@ impl ArcCache {
     /// a matching one exists.
     pub fn get_erased_record<K>(
         &self,
-        composite_id: &CompositeId,
+        composite_id: &CompositeId<K>,
     ) -> Option<Box<Arc<dyn ErasedRecord<K>>>>
     where
-        K: Eq + Hash,
+        K: Eq + Hash + Clone + fmt::Display,
     {
         self.foo.get(&composite_id.1).cloned().map(erase)
     }

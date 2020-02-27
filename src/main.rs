@@ -16,15 +16,34 @@ pub trait ToCompositeId<Z> {
 }
 
 pub trait ErasedRecord: Id {
-    fn erase(self) -> Box<Arc<dyn ErasedRecord<K = u32>>>;
+    fn erase(self) -> Arc<dyn ErasedRecord<K = u32>>;
 }
 
-impl<T> ErasedRecord for T
+// impl<T> ErasedRecord for T
+// where
+//     T: Id<K = u32> + ToCompositeId<<Self as Id>::K> + 'static,
+// {
+//     fn erase(self) -> Arc<dyn ErasedRecord<K = u32>> {
+//         Arc::new(self)
+//     }
+// }
+
+impl<T> ErasedRecord for Arc<T>
 where
     T: Id<K = u32> + ToCompositeId<<Self as Id>::K> + 'static,
 {
-    fn erase(self) -> Box<Arc<dyn ErasedRecord<K = u32>>> {
-        Box::new(Arc::new(self))
+    fn erase(self) -> Arc<dyn ErasedRecord<K = u32>> {
+        Arc::new(self)
+    }
+}
+
+impl<T> Id for Arc<T>
+where
+    T: Id,
+{
+    type K = <T as Id>::K;
+    fn id(&self) -> <T as Id>::K {
+        self.as_ref().id()
     }
 }
 
@@ -68,15 +87,12 @@ pub struct ArcCache {
 }
 
 #[derive(Default, PartialEq, Clone, Debug)]
-struct ContentType {
+pub struct ContentType {
     model: String,
 }
 
 impl ArcCache {
-    pub fn get_erased_record_u32(
-        &self,
-        id: (u32, u32),
-    ) -> Option<Box<Arc<dyn ErasedRecord<K = u32>>>> {
+    pub fn get_erased_record_u32(&self, id: (u32, u32)) -> Option<Arc<dyn ErasedRecord<K = u32>>> {
         let content_type = self.content_type.get(&id.0)?;
 
         match content_type.model.as_ref() {

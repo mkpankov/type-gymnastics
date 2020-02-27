@@ -1,6 +1,5 @@
+use std::collections::HashMap;
 use std::sync::Arc;
-use std::{collections::HashMap, hash::Hash};
-use std::{convert::TryFrom, fmt, marker::PhantomData};
 
 pub trait Label {
     fn label(&self) -> &str;
@@ -16,7 +15,7 @@ pub trait ToCompositeId<Z> {
 }
 
 pub trait ErasedRecord: Id {
-    fn erase(self) -> Arc<dyn ErasedRecord<K = u32>>;
+    fn erase(self) -> Arc<dyn ErasedRecord<K = <Self as Id>::K>>;
 }
 
 // impl<T> ErasedRecord for T
@@ -30,9 +29,9 @@ pub trait ErasedRecord: Id {
 
 impl<T> ErasedRecord for Arc<T>
 where
-    T: Id<K = u32> + ToCompositeId<<Self as Id>::K> + 'static,
+    T: Id + ToCompositeId<<Self as Id>::K> + 'static,
 {
-    fn erase(self) -> Arc<dyn ErasedRecord<K = u32>> {
+    fn erase(self) -> Arc<dyn ErasedRecord<K = <T as Id>::K>> {
         Arc::new(self)
     }
 }
@@ -79,6 +78,12 @@ impl Id for Bar {
     }
 }
 
+impl ToCompositeId<String> for Bar {
+    fn composite_id(&self) -> CompositeId<String> {
+        CompositeId(1, self.id.clone())
+    }
+}
+
 #[derive(Default, PartialEq, Clone, Debug)]
 pub struct ArcCache {
     pub foo: HashMap<u32, Arc<Foo>>,
@@ -98,6 +103,19 @@ impl ArcCache {
         match content_type.model.as_ref() {
             "foo" => self.foo.get(&id.1).cloned().map(|x| x.erase()),
             // "bar" => self.bar.get(&id.1).cloned().map(|x| x.erase()),
+            _ => None,
+        }
+    }
+
+    pub fn get_erased_record_string(
+        &self,
+        id: (u32, String),
+    ) -> Option<Arc<dyn ErasedRecord<K = String>>> {
+        let content_type = self.content_type.get(&id.0)?;
+
+        match content_type.model.as_ref() {
+            // "foo" => self.foo.get(&id.1).cloned().map(|x| x.erase()),
+            "bar" => self.bar.get(&id.1).cloned().map(|x| x.erase()),
             _ => None,
         }
     }

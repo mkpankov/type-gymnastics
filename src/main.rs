@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 pub trait Label {
@@ -46,6 +46,7 @@ where
     }
 }
 
+#[derive(Default, PartialEq, Debug)]
 pub struct CompositeId<X>(pub u32, pub X);
 
 #[derive(serde::Deserialize, Debug, PartialEq)]
@@ -119,6 +120,35 @@ impl ArcCache {
             _ => None,
         }
     }
+}
+
+#[derive(Default, PartialEq, Debug)]
+struct AvailableAction {
+    composite_id: CompositeId<u32>,
+}
+
+type ActionMap = BTreeMap<String, Vec<(Arc<AvailableAction>, Box<Arc<dyn ErasedRecord<K = u32>>>)>>;
+
+fn group_actions_by_label(xs: Vec<Arc<AvailableAction>>, cache: &ArcCache) -> ActionMap {
+    let mut x = xs.into_iter().fold(BTreeMap::new(), |mut x, action| {
+        match cache.get_erased_record_u32((action.composite_id.0, action.composite_id.1)) {
+            Some(r) => {
+                // let xs = x.entry(r.label().to_string()).or_insert_with(|| vec![]);
+
+                // xs.push((action, r));
+            }
+            None => {
+                println!(
+                    "Discarded action {:?} because it did not have an erased type",
+                    action
+                );
+            }
+        };
+
+        x
+    });
+
+    x
 }
 
 fn main() {}
